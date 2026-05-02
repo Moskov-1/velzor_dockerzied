@@ -26,6 +26,7 @@ vendor
 .env.local
 .env.*.local
 .env.backup
+.env.docker
 storage/logs
 storage/framework/cache
 bootstrap/cache

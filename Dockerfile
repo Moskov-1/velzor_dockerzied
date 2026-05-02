@@ -111,10 +111,8 @@ RUN mkdir -p /app/storage/logs \
     && mkdir -p /app/storage/framework/views \
     && mkdir -p /app/bootstrap/cache
 
-# Set permissions
-RUN chown -R www-data:www-data /app && \
-    chmod -R 755 /app/storage && \
-    chmod -R 755 /app/bootstrap/cache
+# Permissions for storage/bootstrap moved to entrypoint to handle
+# runtime mounts and UID/GID differences.
 
 # Copy Nginx configuration
 COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
@@ -123,10 +121,10 @@ COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 # Copy Supervisor configuration
 COPY docker/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
 
-# Clear cache and optimize for production
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
+# Run Laravel caches at container startup so they reflect runtime env
+# The entrypoint will regenerate config/route/view caches using runtime env
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Expose port
 EXPOSE 80
@@ -135,5 +133,6 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/health || exit 1
 
-# Start PHP-FPM and Nginx
+# Start PHP-FPM and Nginx via supervisord; entrypoint runs cache commands first
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
