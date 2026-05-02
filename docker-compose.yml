@@ -10,24 +10,10 @@ services:
     working_dir: /app
     ports:
       - "80:80"
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_DATABASE=velzon
-      - DB_USERNAME=velzon
-      - DB_PASSWORD=secret
-      - CACHE_DRIVER=redis
-      - QUEUE_CONNECTION=redis
-      - SESSION_DRIVER=redis
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=null
-      - REDIS_PORT=6379
+    env_file:
+      - .env.docker
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
@@ -46,27 +32,32 @@ services:
     container_name: velzon_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: velzon
-      POSTGRES_USER: velzon
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${DB_DATABASE:-velzon}
+      POSTGRES_USER: ${DB_USERNAME:-velzon}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U velzon"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-velzon}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - velzon-network
 
+  # Redis — only started when you explicitly enable the 'redis' profile:
+  #   docker compose --profile redis up
+  # Leave this off if you are using CACHE_DRIVER=database, QUEUE_CONNECTION=database, SESSION_DRIVER=database
   redis:
     image: redis:7-alpine
     container_name: velzon_redis
     restart: unless-stopped
-    command: redis-server --requirepass "" --appendonly yes
+    profiles:
+      - redis
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     ports:
@@ -79,11 +70,14 @@ services:
     networks:
       - velzon-network
 
-  # Optional: Nginx for development with live reload
+  # Optional: Extra Nginx for development with live reload
+  #   docker compose --profile dev up
   nginx-dev:
     image: nginx:alpine
     container_name: velzon_nginx_dev
     restart: unless-stopped
+    profiles:
+      - dev
     ports:
       - "8080:80"
     volumes:
@@ -93,8 +87,6 @@ services:
       - app
     networks:
       - velzon-network
-    profiles:
-      - dev
 
 volumes:
   postgres_data:

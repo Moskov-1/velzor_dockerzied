@@ -17,7 +17,7 @@ RUN npm run build
 
 
 # Stage 2: PHP Dependencies - Build PHP dependencies
-FROM composer:2-php8.3 AS php-dependencies
+FROM composer:2-php8.4 AS php-dependencies
 
 WORKDIR /app
 
@@ -35,7 +35,7 @@ RUN composer install \
 
 
 # Stage 3: PHP Development Dependencies - For optimization
-FROM composer:2-php8.3 AS php-dev-dependencies
+FROM composer:2-php8.4 AS php-dev-dependencies
 
 WORKDIR /app
 
@@ -51,7 +51,7 @@ RUN composer install \
 
 
 # Stage 4: Application Runtime - Final production image
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
