@@ -4,7 +4,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.no-redis
+      dockerfile: Dockerfile
     container_name: velzon_app
     restart: unless-stopped
     working_dir: /app
@@ -48,8 +48,30 @@ services:
     networks:
       - velzon-network
 
+  # Redis — only started when you explicitly enable the 'redis' profile:
+  #   docker compose --profile redis up
+  # Leave this off if you are using CACHE_DRIVER=database, QUEUE_CONNECTION=database, SESSION_DRIVER=database
+  redis:
+    image: redis:7-alpine
+    container_name: velzon_redis
+    restart: unless-stopped
+    profiles:
+      - redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - velzon-network
+
   # Optional: Extra Nginx for development with live reload
-  #   docker compose -f docker-compose.no-redis.yml --profile dev up
+  #   docker compose --profile dev up
   nginx-dev:
     image: nginx:alpine
     container_name: velzon_nginx_dev
@@ -68,6 +90,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   velzon-network:

@@ -85,6 +85,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     opcache \
     gettext
 
+# Install Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
+
 # Copy PHP configuration
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
 COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
