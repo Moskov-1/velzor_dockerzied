@@ -26,16 +26,14 @@ COPY composer.json composer.lock ./
 
 # Install PHP dependencies without dev dependencies
 # Ensure GD and other system libs are available for extensions required by composer packages
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
         libpng-dev \
-        libjpeg62-turbo-dev \
-        libfreetype6-dev \
-        zlib1g-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
         libzip-dev \
+        zlib-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" gd \
-    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install -j"$(nproc)" gd zip \
     && composer install \
         --no-dev \
         --no-interaction \
@@ -43,7 +41,6 @@ RUN apt-get update \
         --no-scripts \
         --prefer-dist \
         --optimize-autoloader
-
 
 # Stage 3: PHP Development Dependencies - For optimization
 FROM composer:2 AS php-dev-dependencies
@@ -54,16 +51,14 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 # Install all PHP dependencies including dev
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
         libpng-dev \
-        libjpeg62-turbo-dev \
-        libfreetype6-dev \
-        zlib1g-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
         libzip-dev \
+        zlib-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" gd \
-    && rm -rf /var/lib/apt/lists/* \
     && composer install \
         --no-interaction \
         --no-ansi \
@@ -74,37 +69,54 @@ RUN apt-get update \
 # Stage 4: Application Runtime - Final production image
 FROM php:8.4-fpm-alpine
 
-# Install system dependencies
+# Create www-data user/group (Alpine doesn't include it by default)
+RUN addgroup -g 82 -S www-data 2>/dev/null || true \
+    && adduser -u 82 -D -S -G www-data www-data 2>/dev/null || true
+
+# Install system dependencies (Alpine-compatible package names)
 RUN apk add --no-cache \
     nginx \
     supervisor \
+    postgresql-dev \
     postgresql-client \
-    mysql-client \
+    mariadb-client \
     git \
     curl \
     zip \
     unzip \
     oniguruma-dev \
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    libzip \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
+    libzip-dev \
     gettext-dev \
     bash \
     ca-certificates
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    pdo_pgsql \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath \
-    gd \
-    opcache \
-    gettext
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_mysql \
+        pdo_pgsql \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        opcache \
+        gettext \
+        mbstring \
+        zip
+
+# Create required log directories
+RUN mkdir -p /var/log/supervisor \
+    && mkdir -p /var/log/php-fpm \
+    && mkdir -p /var/log/nginx \
+    && mkdir -p /run/nginx
 
 # Copy PHP configuration
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
