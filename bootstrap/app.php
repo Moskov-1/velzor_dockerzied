@@ -18,6 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
         then: function () {
+            Route::middleware(['web'])
+                ->group(base_path('routes/auth.php'));
+
+            Route::middleware(['web'])
+                ->group(base_path('routes/settings.php'));
+
             Route::middleware(['web', 'auth', 'admin.auth', 'session.validity.check' ])->prefix('admin')
                 ->group(base_path('routes/admin.php'));
         }

@@ -134,6 +134,7 @@ COPY --from=php-dependencies /app/vendor ./vendor
 # Copy application code
 COPY . .
 
+
 # Create necessary directories
 RUN mkdir -p /app/storage/logs \
     && mkdir -p /app/storage/framework/cache \

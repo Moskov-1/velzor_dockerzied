@@ -44,7 +44,7 @@ Route::get('/app-maintainace-setting', function(){
     return view('backend.layout.maintainance.toggle-mode');
 })->name('backend.settings.get.maintainace.page');
 
-require_once __DIR__ .'/auth.php';
+
 
 
 Route::get('/success/{booking_id}', [SiteController::class, 'success'])->name('stripe.success');
