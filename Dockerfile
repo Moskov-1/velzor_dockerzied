@@ -17,7 +17,7 @@ RUN npm run build
 
 
 # Stage 2: PHP Dependencies - Build PHP dependencies
-FROM composer:2-php8.4 AS php-dependencies
+FROM composer:latest AS php-dependencies
 
 WORKDIR /app
 
@@ -35,7 +35,7 @@ RUN composer install \
 
 
 # Stage 3: PHP Development Dependencies - For optimization
-FROM composer:2-php8.4 AS php-dev-dependencies
+FROM composer:latest AS php-dev-dependencies
 
 WORKDIR /app
 

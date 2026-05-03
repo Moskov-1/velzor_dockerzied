@@ -17,7 +17,7 @@ RUN npm run build
 
 
 # Stage 2: PHP Dependencies - Build PHP dependencies
-FROM composer:2-php8.4 AS php-dependencies
+FROM composer:2 AS php-dependencies
 
 WORKDIR /app
 
@@ -25,17 +25,28 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 # Install PHP dependencies without dev dependencies
-RUN composer install \
-    --no-dev \
-    --no-interaction \
-    --no-ansi \
-    --no-scripts \
-    --prefer-dist \
-    --optimize-autoloader
+# Ensure GD and other system libs are available for extensions required by composer packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpng-dev \
+        libjpeg62-turbo-dev \
+        libfreetype6-dev \
+        zlib1g-dev \
+        libzip-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" gd \
+    && rm -rf /var/lib/apt/lists/* \
+    && composer install \
+        --no-dev \
+        --no-interaction \
+        --no-ansi \
+        --no-scripts \
+        --prefer-dist \
+        --optimize-autoloader
 
 
 # Stage 3: PHP Development Dependencies - For optimization
-FROM composer:2-php8.4 AS php-dev-dependencies
+FROM composer:2 AS php-dev-dependencies
 
 WORKDIR /app
 
@@ -43,11 +54,21 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 # Install all PHP dependencies including dev
-RUN composer install \
-    --no-interaction \
-    --no-ansi \
-    --prefer-dist \
-    --optimize-autoloader
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpng-dev \
+        libjpeg62-turbo-dev \
+        libfreetype6-dev \
+        zlib1g-dev \
+        libzip-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" gd \
+    && rm -rf /var/lib/apt/lists/* \
+    && composer install \
+        --no-interaction \
+        --no-ansi \
+        --prefer-dist \
+        --optimize-autoloader
 
 
 # Stage 4: Application Runtime - Final production image
